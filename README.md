@@ -17,6 +17,7 @@ This project was developed for a university practical assignment on application 
 - [REST API](#rest-api)
 - [Verification and Data Persistence](#verification-and-data-persistence)
 - [Scope and Limitations](#scope-and-limitations)
+- [License](#license)
 - [Kurzbeschreibung (DE)](#kurzbeschreibung-de)
 - [Contact](#contact)
 
@@ -72,6 +73,7 @@ The host publishes only the API as `127.0.0.1:8002` to container port `8000`. Po
 ├── Dockerfile        # API image definition
 ├── compose.yaml      # API, PostgreSQL, health check, and named volume
 ├── deploy.sh         # Validate, build, and start the Compose stack
+├── LICENSE           # MIT License
 ├── .env.example      # Safe template for the local database password
 ├── .gitignore        # Excludes local credentials, environments, and caches
 └── .dockerignore     # Keeps local files out of the Docker build context
@@ -195,6 +197,10 @@ For this project, the API health endpoint, note creation, note listing, and data
 - PostgreSQL is reachable from the API over the Compose network, while only the API port is bound to the host loopback address.
 - Python dependencies use version ranges and are not locked to exact package versions.
 - The local `.env` password is a learning credential. Use a secrets-management approach for any real deployment.
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
 
 <a id="kurzbeschreibung-de"></a>
 ## 🇩🇪 Kurzbeschreibung
