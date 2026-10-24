@@ -1,0 +1,21 @@
+# Local environment values; do not commit credentials
+.env
+.env.*
+!.env.example
+
+# Local Python environments
+.venv/
+venv/
+
+# IDE settings
+.idea/
+
+# Python bytecode and tool caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local logs
+*.log
