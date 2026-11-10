@@ -8,14 +8,11 @@ from psycopg.rows import dict_row
 
 
 app = Flask(__name__)
-DATABASE_URL = os.environ.get("DATABASE_URL")
 
 
 def connect_db():
-    """Open a PostgreSQL connection using the URL supplied by the environment."""
-    if not DATABASE_URL:
-        raise RuntimeError("Set the DATABASE_URL environment variable")
-    return psycopg.connect(DATABASE_URL, row_factory=dict_row)
+    """Open a PostgreSQL connection using standard PG* environment variables."""
+    return psycopg.connect(row_factory=dict_row)
 
 
 def init_db():

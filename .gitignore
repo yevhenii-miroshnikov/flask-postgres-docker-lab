@@ -3,6 +3,11 @@
 .env.*
 !.env.example
 
+# Service-specific local env files, if created
+config/*.env
+config/*.env.*
+!config/*.env.example
+
 # Local Python environments
 .venv/
 venv/

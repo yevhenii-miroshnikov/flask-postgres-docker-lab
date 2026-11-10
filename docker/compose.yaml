@@ -1,10 +1,10 @@
+name: devops-lab1
+
 services:
   db:
     image: postgres:17.11
-    environment:
-      POSTGRES_DB: labdb
-      POSTGRES_USER: labuser
-      POSTGRES_PASSWORD: "${LAB_DB_PASSWORD:?Set LAB_DB_PASSWORD in .env}"
+    env_file:
+      - config/db.env.example
     volumes:
       - compose_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -14,9 +14,11 @@ services:
       retries: 10
 
   api:
-    build: .
-    environment:
-      DATABASE_URL: "postgresql://labuser:${LAB_DB_PASSWORD:?Set LAB_DB_PASSWORD in .env}@db:5432/labdb"
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    env_file:
+      - config/api.env.example
     ports:
       - "127.0.0.1:8002:8000"
     depends_on:

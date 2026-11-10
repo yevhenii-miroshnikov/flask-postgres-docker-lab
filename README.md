@@ -29,7 +29,7 @@ This project was developed for a university practical assignment on application 
 - Run the API and database as separate containers on a Compose-managed network.
 - Persist PostgreSQL data in a named Docker volume across container recreation.
 - Use a database health check so Compose waits for PostgreSQL before starting the API.
-- Start or update the local stack with `docker compose` or `bash deploy.sh`.
+- Start or update the local stack with `docker compose` or `bash scripts/deploy.sh`.
 
 ## Architecture
 
@@ -61,22 +61,28 @@ The host publishes only the API as `127.0.0.1:8002` to container port `8000`. Po
 | PostgreSQL | `17.11` |
 | Docker | Docker Engine with Docker Compose v2 |
 
-`requirements.txt` uses compatible version ranges rather than a fully pinned dependency lock, so the exact Python package versions may change between builds.
+`app/requirements.txt` uses compatible version ranges rather than a fully pinned dependency lock, so the exact Python package versions may change between builds.
 
 ## Project Structure
 
 ```text
 .
-├── README.md         # Project overview, setup, API, and persistence guide
-├── app.py            # Flask REST API and table initialization
-├── requirements.txt  # Python runtime dependencies
-├── Dockerfile        # API image definition
-├── compose.yaml      # API, PostgreSQL, health check, and named volume
-├── deploy.sh         # Validate, build, and start the Compose stack
-├── LICENSE           # MIT License
-├── .env.example      # Safe template for the local database password
-├── .gitignore        # Excludes local credentials, environments, and caches
-└── .dockerignore     # Keeps local files out of the Docker build context
+├── app/
+│   ├── app.py                # Flask REST API and table initialization
+│   └── requirements.txt      # Python runtime dependencies
+├── docker/
+│   ├── Dockerfile            # API image definition
+│   └── compose.yaml          # API, PostgreSQL, health check, and named volume
+├── config/
+│   ├── api.env.example       # API's PG* connection settings
+│   └── db.env.example        # PostgreSQL initialization settings
+├── scripts/
+│   └── deploy.sh             # Validate, build, and start the Compose stack
+├── README.md
+├── LICENSE
+├── .env.example              # Single local password source for Compose
+├── .gitignore
+└── .dockerignore
 ```
 
 The local `.env` file is created from `.env.example` and is intentionally not part of the repository.
@@ -95,30 +101,30 @@ git clone https://github.com/yevhenii-miroshnikov/flask-postgres-docker-lab.git
 cd flask-postgres-docker-lab
 ```
 
-Create the local environment file and set a non-empty, URL-safe development password for `LAB_DB_PASSWORD`:
+Create the local environment file and set a non-empty local development password for `LAB_DB_PASSWORD`:
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` in a text editor and set the value. Use a local test password only; never commit `.env`. The Compose file requires this value and uses it for both PostgreSQL initialization and the API connection URL.
+Open `.env` in a text editor and set the value. Use a local test password only; never commit `.env`. Compose uses this value for PostgreSQL initialization and the API connection settings.
 
 Start the stack using either the deployment script:
 
 ```bash
-bash deploy.sh
+bash scripts/deploy.sh
 ```
 
-or Docker Compose directly:
+or Docker Compose directly from the project root:
 
 ```bash
-docker compose up --build --detach
+docker compose --project-directory . --env-file .env -f docker/compose.yaml up --build --detach
 ```
 
 Check the service state and API health:
 
 ```bash
-docker compose ps
+docker compose --project-directory . --env-file .env -f docker/compose.yaml ps
 curl --include http://127.0.0.1:8002/healthz
 ```
 
@@ -134,9 +140,24 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:8002/healthz'
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `LAB_DB_PASSWORD` | Yes | Local development password passed to PostgreSQL and used by the API connection URL. |
+| `LAB_DB_PASSWORD` | Yes | One local password source. Compose substitutes it into both service-specific env files. |
+| `PGHOST` | Set in `config/api.env.example` | PostgreSQL service name (`db`) for container-to-container access. |
+| `PGPORT` | Set in `config/api.env.example` | PostgreSQL port inside the Compose network (`5432`). |
+| `PGDATABASE` / `PGUSER` | Set in `config/api.env.example` | Database name and application user. |
+| `PGPASSWORD` | Derived from `LAB_DB_PASSWORD` | Password read by Psycopg from the standard libpq environment. |
 
-`.env.example` contains an empty value and no credentials. Copy it to `.env` and set a local password before starting Compose. This simple connection URL expects a password made of URL-safe characters. The credentials are intended for a local learning environment, not for production use.
+The root `.env` is used by the Compose CLI for interpolation; it is not itself passed into either container. The two files under `config/` are service-specific `env_file` inputs. Their committed examples reference `LAB_DB_PASSWORD`, so the actual password appears only once, in the ignored local `.env`. For a local `.venv` run against PostgreSQL published on host port `15432`, set the standard connection variables before launching the API. In PowerShell, from the project root:
+
+```powershell
+$env:PGHOST = '127.0.0.1'
+$env:PGPORT = '15432'
+$env:PGDATABASE = 'labdb'
+$env:PGUSER = 'labuser'
+$env:PGPASSWORD = 'your-local-test-password'
+& '.\.venv\Scripts\python.exe' '.\app\app.py'
+```
+
+Use the same local test password that initialized the manual PostgreSQL volume. These credentials are for local learning only.
 
 The PostgreSQL image applies `POSTGRES_PASSWORD` when initializing an empty data directory. Changing `LAB_DB_PASSWORD` later does not change the password of a database that has already been initialized in the named volume.
 
@@ -167,20 +188,20 @@ curl --include http://127.0.0.1:8002/api/notes
 
 ## Verification and Data Persistence
 
-The following workflow checks that a note remains in PostgreSQL after its containers are recreated:
+The following workflow checks that a note remains in PostgreSQL after its containers are recreated. Run the commands from the project root:
 
 1. Start the stack and create a note using the `POST /api/notes` example above. Keep the returned note ID.
 2. Confirm it appears in `GET /api/notes`.
 3. From the project root, stop and remove this Compose stack's containers and network:
 
    ```bash
-   docker compose down
+   docker compose --project-directory . --env-file .env -f docker/compose.yaml down
    ```
 
 4. Start the stack again:
 
    ```bash
-   docker compose up --build --detach
+   docker compose --project-directory . --env-file .env -f docker/compose.yaml up --build --detach
    ```
 
 5. Request `GET /api/notes` again and confirm the note is still present.
